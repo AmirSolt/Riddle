@@ -132,6 +132,7 @@ export async function getProfile(config: Config, twilioId: string) {
             },
             include: {
                 messages: {
+                    where:{message_dir:MessageDir.OUTBOUND},
                     take: config.load_message_to_client_count,
                     orderBy: {
                         created_at: 'asc',
