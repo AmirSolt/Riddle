@@ -1,4 +1,4 @@
-import type {  ConfigType, Message, MessageDir, MessageRole, Config, Profile } from "@prisma/client";
+import type {  ConfigType, Message, MessageDir, Config, Profile } from "@prisma/client";
 
-export type MProfile = (Profile & { messages: Message[]; } & { _count: { messages: number } })
+export type MProfile = (Profile & { messages: Message[]; })
 

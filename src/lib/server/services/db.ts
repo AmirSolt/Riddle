@@ -2,12 +2,44 @@ import { prisma } from "../clients/prisma";
 import { ConfigType, type Message, MessageDir, type Config, type Profile, type MError } from "@prisma/client";
 import { redis } from "../clients/redis";
 import type { MProfile } from "../../customTypes";
+import { error } from "@sveltejs/kit";
 
 
 
 // expire redis records after x
 const defaultRedisExpiration = 60 * 10
 
+
+
+
+
+
+
+export async function getPlayerRank(config:Config, profile:MProfile) {
+    const result = await prisma.$queryRaw<{rank:number}|undefined|null>`
+      SELECT
+        RANK() OVER (ORDER BY points DESC) as rank
+      FROM
+        "Profile"
+      WHERE
+        id = ${profile.id}
+    `;
+
+    if(result==null || result.rank==null){
+        throw error(500, `player rank retrieval failed: result:${result} || result.rank${result?.rank}`)
+    }
+  
+    return result.rank;
+  }
+
+export async function getLeaderboard(config:Config){
+    return await prisma.profile.findMany({
+        take: config.leaderboard_top_count,
+        orderBy: {
+            points: 'desc',
+        },
+    })
+}
 
 
 
@@ -60,7 +92,6 @@ export async function createMessage(
     })
 
     profile.messages.push(message)
-    profile._count.messages++
 
     redis.set(profile.twilio_id, JSON.stringify(profile), "EX", defaultRedisExpiration)
 
@@ -77,8 +108,7 @@ export async function createProfile(config: Config, twilioId: string): Promise<M
     })
     const mPorfile = {
         ...profile,
-        messages: [],
-        _count: { messages: 0 }
+        messages: []
     } as MProfile
 
     redis.set(twilioId, JSON.stringify(mPorfile), "EX", defaultRedisExpiration)
@@ -106,10 +136,7 @@ export async function getProfile(config: Config, twilioId: string) {
                     orderBy: {
                         created_at: 'asc',
                     },
-                },
-                _count: {
-                    select: { messages: true },
-                },
+                }
             }
         })
         if (profileValue) {

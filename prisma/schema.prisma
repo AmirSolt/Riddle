@@ -15,6 +15,7 @@ model Config {
   chatbot_system_message String @default("")
   chatbot_temperature    Float  @default(1)
 
+  leaderboard_top_count Int @default(20)
   disclaimer_repeat_message_count Int @default(150)
   message_char_limit              Int @default(250)
   load_message_to_client_count    Int @default(1)
@@ -24,10 +25,13 @@ model Profile {
   id         String        @id @default(uuid())
   created_at DateTime      @default(now())
   twilio_id  String        @unique
+  credit     Int          @default(3)
+  points     Int          @default(0)
   messages   Message[]
   errors     MError[]
 
   @@index(fields: [twilio_id], type: Hash)
+  @@index(fields: [points], type: BTree)
 }
 
 model Message {
