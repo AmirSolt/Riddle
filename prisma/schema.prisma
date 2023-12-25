@@ -1,0 +1,66 @@
+// npx prisma migrate dev --name init 
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Config {
+  id ConfigType @id
+
+  chatbot_system_message String @default("")
+  chatbot_temperature    Float  @default(1)
+
+  disclaimer_repeat_message_count Int @default(150)
+  message_char_limit              Int @default(250)
+  load_message_to_client_count    Int @default(1)
+}
+
+model Profile {
+  id         String        @id @default(uuid())
+  created_at DateTime      @default(now())
+  twilio_id  String        @unique
+  messages   Message[]
+  errors     MError[]
+
+  @@index(fields: [twilio_id], type: Hash)
+}
+
+model Message {
+  id          String     @id @default(uuid())
+  created_at  DateTime   @default(now())
+  content     String
+  option_ids   String[]
+  profile     Profile    @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  profile_id  String
+  message_dir MessageDir
+  extra_json  Json?
+  image_urls  String[]
+
+  @@index(fields: [created_at], type: BTree)
+}
+
+model MError {
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  content    String
+  profile    Profile  @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  profile_id String
+  extra_json Json?
+
+  @@index(fields: [created_at], type: BTree)
+}
+
+enum MessageDir {
+  INBOUND
+  OUTBOUND
+}
+
+enum ConfigType {
+  FREE
+  TIER_ONE
+}
