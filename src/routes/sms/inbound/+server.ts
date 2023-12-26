@@ -7,24 +7,30 @@ import { getIncomingMessage, getResponseMessage } from '../../../lib/server/serv
 
 
 export const POST = async (event) => {
+
+    console.log("message recieved")
+
+
     const text = await event.request.text();
     const params = Object.fromEntries(new URLSearchParams(text));
     const { Body:incomingMessageStr, From:senderTwilioId } = params
+
+    console.log(`message= incomingMessageStr:${incomingMessageStr} senderTwilioId:${senderTwilioId}`)
     
     const twimlResponse = new TwilioSDK.twiml.MessagingResponse();
 
-    try{
-        console.log("message recieved")
-
-        
+    // try{        
         const config:Config = event.locals.config
         let profile = await getProfile(config, senderTwilioId)
         if(profile == null){
             profile = await createProfile(config, senderTwilioId)
         }
 
+        console.log(`profile: ${JSON.stringify(profile, null, 2)}`)
+
         const incomingMessage = await getIncomingMessage(config, profile, incomingMessageStr)
         if(incomingMessage==null){
+            console.log("incoming message failed")
             return new Response(twimlResponse.toString(), {
                 headers: {
                 'Content-Type': 'application/xml',
@@ -60,31 +66,31 @@ export const POST = async (event) => {
 
 
 
-    }catch(err){
+    // }catch(err){
+    //     console.log("Error:",err)
 
+    //     const config:Config = event.locals.config
+    //     let profile = await getProfile(config, senderTwilioId)
+    //     if(profile == null){
+    //         profile = await createProfile(config, senderTwilioId)
+    //     }
 
-        const config:Config = event.locals.config
-        let profile = await getProfile(config, senderTwilioId)
-        if(profile == null){
-            profile = await createProfile(config, senderTwilioId)
-        }
+    //     await createMError(
+    //         config,
+    //         profile,
+    //         "Error:",err
+    //     )
 
-        await createMError(
-            config,
-            profile,
-            "Error:",err
-        )
+    //     const responseBody = `Error: Server encoutered an error. A notification has been sent to the developer.`
+    //     twimlResponse.message(responseBody)
 
-        const responseBody = `Error: Server encoutered an error. A notification has been sent to the developer.`
-        twimlResponse.message(responseBody)
+    //     return new Response(twimlResponse.toString(), {
+    //         headers: {
+    //         'Content-Type': 'application/xml',
+    //         },
+    //     });
 
-        return new Response(twimlResponse.toString(), {
-            headers: {
-            'Content-Type': 'application/xml',
-            },
-        });
-
-    }
+    // }
 };
 
 

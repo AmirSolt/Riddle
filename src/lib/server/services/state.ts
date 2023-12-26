@@ -13,22 +13,17 @@ const GAME_OPTION_ID = "game"
 
 
 export async function getIncomingMessage(config: Config, profile: MProfile, incomingMessageStr: string): Promise<IncomingMessage | null> {
-    const lastOutboundMessage = profile.messages.slice(-1)[0]
     
-    if(lastOutboundMessage==null){
+    
+    
+    if(profile.lastOOMessage==null){
         return {
             body: incomingMessageStr,
             optionId: null
         }
     }
-    if(lastOutboundMessage.message_dir !== MessageDir.OUTBOUND){
-        throw error(500, "Error: state.ts finding last outbound message error!")
-    }
-    if(lastOutboundMessage.option_ids.length <= 0){
-        throw error(500, "Error: state.ts last outbound message has no options")
-    }
     
-    const lastMessageOptionIds = lastOutboundMessage.option_ids
+    const lastMessageOptionIds = profile.lastOOMessage.option_ids
 
     if (lastMessageOptionIds.length === 1 && lastMessageOptionIds[0] === GAME_OPTION_ID) {
         return {
@@ -36,6 +31,8 @@ export async function getIncomingMessage(config: Config, profile: MProfile, inco
             optionId: null
         }
     }
+
+    console.log("lastMessageOptionIds",lastMessageOptionIds)
 
     const chosenOptionId = lastMessageOptionIds.find(optId => optId.toLowerCase() === incomingMessageStr.toLowerCase())
     if (chosenOptionId) {
@@ -50,22 +47,14 @@ export async function getIncomingMessage(config: Config, profile: MProfile, inco
 
 
 export async function getResponseMessage(config: Config, profile: MProfile, incomingMessage: IncomingMessage): Promise<ResponseMessage> {
-    const lastOutboundMessage = profile.messages.slice(-1)[0]
-    
-    if(lastOutboundMessage==null){
+    if(profile.lastOOMessage==null){
         return {
             body: `Wanna play a game?\nchoose:\n${optionsToStr(normalOptions)}`,
             options:normalOptions,
         }
     }
-    if(lastOutboundMessage.message_dir !== MessageDir.OUTBOUND){
-        throw error(500, "Error: state.ts finding last outbound message error!")
-    }
-    if(lastOutboundMessage.option_ids.length <= 0){
-        throw error(500, "Error: state.ts last outbound message has no options")
-    }
-    
-    const lastMessageOptionIds = lastOutboundMessage.option_ids
+
+    const lastMessageOptionIds = profile.lastOOMessage.option_ids
 
     if (lastMessageOptionIds.length === 1 && lastMessageOptionIds[0] === GAME_OPTION_ID) {
 
@@ -74,12 +63,16 @@ export async function getResponseMessage(config: Config, profile: MProfile, inco
             profile,
             incomingMessage.body,
         )
-        const lastGame = profile.games.slice(-1)[0]
+    
+        if(profile.lastGame==null){
+            throw error(500, "Error: services/state.ts-getResponseMessage last game can't be null but it is.")
+        }
 
-        if (lastGame.is_active) {
-            const censoredPhrase = censorPhrase(lastGame.phrase, [...lastGame.given, ...lastGame.guesses])
+        if (profile.lastGame.is_active) {
+            const censoredPhrase = censorPhrase(profile.lastGame.phrase, [...profile.lastGame.given, ...profile.lastGame.guesses])
+            const guessesCountStr = `${profile.lastGame.guesses.length}/${config.game_guess_count}`
             return {
-                body: `${censoredPhrase}`,
+                body: `${guessesCountStr}\n${censoredPhrase}`,
                 options: [
                     {
                         id: GAME_OPTION_ID,
@@ -89,9 +82,9 @@ export async function getResponseMessage(config: Config, profile: MProfile, inco
             }
         }
 
-        let endMessage = lastGame.is_won ?
-            `Win ${lastGame.phrase}` :
-            `Lost ${lastGame.phrase}`
+        let endMessage = profile.lastGame.is_won ?
+            `Win ${profile.lastGame.phrase}` :
+            `Lost ${profile.lastGame.phrase}`
 
 
         return {
@@ -101,6 +94,7 @@ export async function getResponseMessage(config: Config, profile: MProfile, inco
 
     }
 
+    console.log(`Calling tool: ${incomingMessage.optionId}`)
     return await tools[incomingMessage.optionId].func(config, profile)
 
 }
@@ -209,7 +203,7 @@ function optionsToStr(options:Option[]){
 
 async function handleGame(config: Config, profile: MProfile, difficulty: Difficulty) {
     const phrase = await getPhrase(config)
-
+    console.log(`Found phrase: ${phrase.content}`) 
     profile = await createGame(
         config,
         profile,
@@ -217,17 +211,22 @@ async function handleGame(config: Config, profile: MProfile, difficulty: Difficu
         difficulty,
     )
 
-    const lastGame = profile.games.slice(-1)[0]
-    if (!lastGame.is_active) {
+    console.log(`Game created: ${profile.lastGame}`) 
+    
+    if(profile.lastGame==null){
+        throw error(500, "Error: services/state.ts-handleGame last game can't be null but it is.")
+    }
+
+    if (!profile.lastGame.is_active) {
         return {
             body: `Not enough credit\n credits:${profile.credit}\nActions:${optionsToStr(normalOptions)}`,
             options:normalOptions
         }
     }
 
-    const censoredPhrase = censorPhrase(lastGame.phrase, [...lastGame.given, ...lastGame.guesses])
+    const censoredPhrase = censorPhrase(profile.lastGame.phrase, [...profile.lastGame.given, ...profile.lastGame.guesses])
     return {
-        body: `${censoredPhrase}`,
+        body: `${config.game_guess_count} times to guess the letters\n1 time to guess the phrase\n${censoredPhrase}`,
         options: [
             {
                 id: GAME_OPTION_ID,

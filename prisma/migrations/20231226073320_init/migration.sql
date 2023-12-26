@@ -10,12 +10,17 @@ CREATE TYPE "Difficulty" AS ENUM ('EASY', 'MEDIUM', 'HARD');
 -- CreateTable
 CREATE TABLE "Config" (
     "id" "ConfigType" NOT NULL,
-    "chatbot_system_message" TEXT NOT NULL DEFAULT '',
-    "chatbot_temperature" DOUBLE PRECISION NOT NULL DEFAULT 1,
+    "easy_game_given_count" INTEGER NOT NULL DEFAULT 5,
+    "medium_game_given_count" INTEGER NOT NULL DEFAULT 3,
+    "hard_game_given_count" INTEGER NOT NULL DEFAULT 1,
+    "easy_points_to_win" INTEGER NOT NULL DEFAULT 1,
+    "medium_points_to_win" INTEGER NOT NULL DEFAULT 2,
+    "hard_points_to_win" INTEGER NOT NULL DEFAULT 4,
+    "easy_credit_cost" INTEGER NOT NULL DEFAULT 1,
+    "medium_credit_cost" INTEGER NOT NULL DEFAULT 2,
+    "hard_credit_cost" INTEGER NOT NULL DEFAULT 4,
     "leaderboard_top_count" INTEGER NOT NULL DEFAULT 20,
     "disclaimer_repeat_message_count" INTEGER NOT NULL DEFAULT 150,
-    "message_char_limit" INTEGER NOT NULL DEFAULT 250,
-    "load_message_to_client_count" INTEGER NOT NULL DEFAULT 1,
 
     CONSTRAINT "Config_pkey" PRIMARY KEY ("id")
 );
@@ -47,10 +52,14 @@ CREATE TABLE "Message" (
 
 -- CreateTable
 CREATE TABLE "Game" (
-    "id" BIGSERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "answer" TEXT NOT NULL,
+    "phrase" TEXT NOT NULL,
     "difficulty" "Difficulty" NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "is_won" BOOLEAN NOT NULL DEFAULT false,
+    "points_to_win" INTEGER NOT NULL,
+    "credit_cost" INTEGER NOT NULL,
     "given" TEXT[],
     "guesses" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "profile_id" TEXT NOT NULL,

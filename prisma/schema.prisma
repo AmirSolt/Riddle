@@ -24,6 +24,8 @@ model Config {
   medium_credit_cost Int @default(2)
   hard_credit_cost Int @default(4)
 
+  game_guess_count Int @default(4)
+
   leaderboard_top_count           Int @default(20)
   disclaimer_repeat_message_count Int @default(150)
 }
@@ -57,7 +59,7 @@ model Message {
 }
 
 model Game {
-  id         BigInt     @id @default(autoincrement())
+  id         String     @id @default(uuid())
   created_at  DateTime   @default(now())
   phrase     String
   difficulty Difficulty
