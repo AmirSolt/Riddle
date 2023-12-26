@@ -1,4 +1,4 @@
-import type {  ConfigType, Message, MessageDir, Config, Profile } from "@prisma/client";
+import type {  ConfigType, Message, MessageDir, Config, Profile, Game } from "@prisma/client";
 
-export type MProfile = (Profile & { messages: Message[]; })
+export type MProfile = (Profile & { games: Game[]; } & { messages: Message[]; })
 

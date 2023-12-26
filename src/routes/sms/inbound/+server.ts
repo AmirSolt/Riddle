@@ -3,7 +3,7 @@ import { getProfile, createProfile, createMessage, createMError } from '$lib/ser
 import TwilioSDK from 'twilio';
 import type { Config, MError } from '@prisma/client';
 import { MessageDir } from '@prisma/client';
-import { getIncomingMessage, getResponseMessage } from '../../../lib/server/services/game';
+import { getIncomingMessage, getResponseMessage } from '../../../lib/server/services/state';
 
 
 export const POST = async (event) => {
@@ -23,7 +23,7 @@ export const POST = async (event) => {
             profile = await createProfile(config, senderTwilioId)
         }
 
-        const incomingMessage = getIncomingMessage(config, profile, incomingMessageStr)
+        const incomingMessage = await getIncomingMessage(config, profile, incomingMessageStr)
         if(incomingMessage==null){
             return new Response(twimlResponse.toString(), {
                 headers: {
@@ -32,7 +32,7 @@ export const POST = async (event) => {
             });
         }
 
-        const responseMessage = getResponseMessage(config, profile, incomingMessage)
+        const responseMessage = await getResponseMessage(config, profile, incomingMessage)
 
         if(responseMessage.body){
             await createMessage(
@@ -40,7 +40,7 @@ export const POST = async (event) => {
                 profile,
                 MessageDir.INBOUND,
                 incomingMessage.body,
-                [incomingMessage.optionId]
+                incomingMessage.optionId?[incomingMessage.optionId]:[]
             )
             await createMessage(
                 config,

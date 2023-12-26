@@ -12,22 +12,30 @@ datasource db {
 model Config {
   id ConfigType @id
 
-  chatbot_system_message String @default("")
-  chatbot_temperature    Float  @default(1)
+  easy_game_given_count Int @default(5)
+  medium_game_given_count Int @default(3)
+  hard_game_given_count Int @default(1)
 
-  leaderboard_top_count Int @default(20)
+  easy_points_to_win Int @default(1)
+  medium_points_to_win Int @default(2)
+  hard_points_to_win Int @default(4)
+
+  easy_credit_cost Int @default(1)
+  medium_credit_cost Int @default(2)
+  hard_credit_cost Int @default(4)
+
+  leaderboard_top_count           Int @default(20)
   disclaimer_repeat_message_count Int @default(150)
-  message_char_limit              Int @default(250)
-  load_message_to_client_count    Int @default(1)
 }
 
 model Profile {
-  id         String        @id @default(uuid())
-  created_at DateTime      @default(now())
-  twilio_id  String        @unique
-  credit     Int          @default(3)
-  points     Int          @default(0)
+  id         String    @id @default(uuid())
+  created_at DateTime  @default(now())
+  twilio_id  String    @unique
+  credit     Int       @default(3)
+  points     Int       @default(0)
   messages   Message[]
+  games      Game[]
   errors     MError[]
 
   @@index(fields: [twilio_id], type: Hash)
@@ -38,7 +46,7 @@ model Message {
   id          String     @id @default(uuid())
   created_at  DateTime   @default(now())
   content     String
-  option_ids   String[]
+  option_ids  String[]
   profile     Profile    @relation(fields: [profile_id], references: [id], onDelete: Cascade)
   profile_id  String
   message_dir MessageDir
@@ -46,6 +54,26 @@ model Message {
   image_urls  String[]
 
   @@index(fields: [created_at], type: BTree)
+}
+
+model Game {
+  id         BigInt     @id @default(autoincrement())
+  created_at  DateTime   @default(now())
+  phrase     String
+  difficulty Difficulty
+  is_active Boolean @default(true)
+  is_won  Boolean @default(false)
+  points_to_win  Int
+  credit_cost Int
+  given      String[]
+  guesses    String[]   @default([])
+  profile    Profile    @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  profile_id String
+}
+
+model Phrase {
+  id Int @id @default(autoincrement())
+  content String
 }
 
 model MError {
@@ -68,3 +96,10 @@ enum ConfigType {
   FREE
   TIER_ONE
 }
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
