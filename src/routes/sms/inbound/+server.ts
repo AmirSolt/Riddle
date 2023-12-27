@@ -2,8 +2,8 @@ import type { RequestHandler } from '@sveltejs/kit'
 import { getProfile, createProfile, createMessage, createMError } from '$lib/server/services/db';
 import TwilioSDK from 'twilio';
 import type { Config, MError } from '@prisma/client';
-import { MessageDir } from '@prisma/client';
-import { getIncomingMessage, getResponseMessage } from '../../../lib/server/services/state';
+import { MessageDir, MessageType } from '@prisma/client';
+import { createResponseMessage, handleIncomingMessage } from '$lib/server/services/state.js';
 
 
 export const POST = async (event) => {
@@ -15,22 +15,14 @@ export const POST = async (event) => {
     const params = Object.fromEntries(new URLSearchParams(text));
     const { Body:incomingMessageStr, From:senderTwilioId } = params
 
-    console.log(`message= incomingMessageStr:${incomingMessageStr} senderTwilioId:${senderTwilioId}`)
+    console.log(`= incomingMessageStr:${incomingMessageStr} senderTwilioId:${senderTwilioId}`)
     
     const twimlResponse = new TwilioSDK.twiml.MessagingResponse();
 
     // try{        
-        const config:Config = event.locals.config
-        let profile = await getProfile(config, senderTwilioId)
-        if(profile == null){
-            profile = await createProfile(config, senderTwilioId)
-        }
 
-        console.log(`profile: ${JSON.stringify(profile, null, 2)}`)
-
-        const incomingMessage = await getIncomingMessage(config, profile, incomingMessageStr)
-        if(incomingMessage==null){
-            console.log("incoming message failed")
+        // preemptive cleaning
+        if(incomingMessageStr==null){
             return new Response(twimlResponse.toString(), {
                 headers: {
                 'Content-Type': 'application/xml',
@@ -38,24 +30,21 @@ export const POST = async (event) => {
             });
         }
 
-        const responseMessage = await getResponseMessage(config, profile, incomingMessage)
+        // init
+        const config:Config = event.locals.config
+        let profile = await getProfile(config, senderTwilioId)
+        if(profile == null){
+            profile = await createProfile(config, senderTwilioId)
+        }
 
-        if(responseMessage.body){
-            await createMessage(
-                config,
-                profile,
-                MessageDir.INBOUND,
-                incomingMessage.body,
-                incomingMessage.optionId?[incomingMessage.optionId]:[]
-            )
-            await createMessage(
-                config,
-                profile,
-                MessageDir.OUTBOUND,
-                responseMessage.body,
-                responseMessage.options.map(opt=>opt.id)
-            )
-            twimlResponse.message(responseMessage.body)
+
+        // handle incoming message
+        await handleIncomingMessage(config, profile, incomingMessageStr)
+
+        // handle response
+        const responseMessageStr = await createResponseMessage(config, profile, incomingMessageStr)
+        if(responseMessageStr){
+            twimlResponse.message(responseMessageStr)
         }
         
         return new Response(twimlResponse.toString(), {

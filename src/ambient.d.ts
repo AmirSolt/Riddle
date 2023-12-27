@@ -1,20 +1,14 @@
 
 
 
-
-interface IncomingMessage{
-    body:string
-    optionId:Option.id
-}
-
-
-
-interface ResponseMessage{
-    body:string
-    options:Option[]
-}
-
-interface Option{
+interface MenuOption{
     id:string
-    body:string
+    description:string
+}
+
+interface GameRecord{
+    difficulty:string
+    phrase:string
+    givenChars:string[]
+    guessedChars:string[]
 }

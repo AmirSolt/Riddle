@@ -1,7 +1,6 @@
 import { prisma } from "../clients/prisma";
-import { ConfigType, type Message, MessageDir, type Config, type Profile, type MError, Difficulty, type Phrase } from "@prisma/client";
+import { ConfigType, type Message, MessageDir, type Config, type Profile, type MError, Difficulty, type Phrase, MessageType } from "@prisma/client";
 import { redis } from "../clients/redis";
-import type { MProfile } from "../../customTypes";
 import { error } from "@sveltejs/kit";
 
 
@@ -39,137 +38,37 @@ export async function getPhrase(config: Config){
 
 
 
-
-export async function updateActiveGame(
-    config: Config,
-    profile: MProfile,
-    newGuess:string|undefined,
-    isWon:boolean=false,
-    isActive:boolean=true,
-) {
-
-
-    if(profile.lastGame==null || !profile.lastGame.is_active){
-        throw error(500, "Error: services/db.ts Trying to update last active game, but last game is not active.")
-    }
-
-    if(newGuess){
-        profile.lastGame.guesses.push(newGuess.toLowerCase())
-    }
-
-    const game = await prisma.game.update({
-        where:{
-            id:profile.lastGame.id,
-            is_active:true
-        },
-        data:{
-            is_active:isActive,
-            is_won:isWon,
-            guesses:profile.lastGame.guesses
-        }
-    })
-
-    profile = {
-        ...profile,
-        lastGame:game,
-        lastOOMessage: profile.lastOOMessage
-    } as MProfile
-
-    if(isWon){
-        const tempProfile = await prisma.profile.update({
-            where:{id:profile.id},
-            data:{points:profile.points+game.points_to_win}
-        })
-        profile = {
-            ...tempProfile,
-            lastGame:profile.lastGame,
-            lastOOMessage: profile.lastOOMessage
-        } as MProfile
-    }
-
-    redis.set(profile.twilio_id, JSON.stringify(profile), "EX", defaultRedisExpiration)
-
-    return profile
-
-}
-
-
 export async function createGame(
     config: Config,
-    profile: MProfile,
+    profile: Profile,
     phrase: string,
     difficulty: Difficulty,
+    isWon:boolean,
+    givenChars:string[],
+    guessedChars:string[],
+    pointsToWin:number,
+    creditCost:number,
 ) {
-    let givenCount: number|undefined
-    let pointsToWin: number|undefined
-    let creditCost: number|undefined
-    switch (difficulty) {
-        case Difficulty.EASY:
-            givenCount = config.easy_game_given_count
-            pointsToWin = config.easy_points_to_win
-            creditCost = config.easy_credit_cost
-            break;
-        case Difficulty.MEDIUM:
-            givenCount = config.medium_game_given_count
-            pointsToWin = config.medium_points_to_win
-            creditCost = config.medium_credit_cost
-            break;
-        case Difficulty.HARD:
-            givenCount = config.hard_game_given_count
-            pointsToWin = config.hard_points_to_win
-            creditCost = config.hard_credit_cost
-            break;
-        default:
-            throw error(500, `Difficulty is unkown. difficulty:${difficulty}`)
-    }
-    function getRandomCharacters(phrase: string, size: number): string[] {
-        const charsArray = Array.from(phrase.toLocaleLowerCase());
-        const uniqueCharsArray = [...new Set(charsArray)];
-        const shuffledArray = uniqueCharsArray.sort(() => 0.5 - Math.random());
-        return shuffledArray.slice(0, size);
-    }
-
-    if(profile.credit<creditCost){
-        return profile
-    }
 
 
-
-
-
-    const game = await prisma.game.create({
+    return await prisma.game.create({
         data: {
             profile_id: profile.id,
             phrase,
             difficulty,
-            given:getRandomCharacters(phrase, givenCount),
+            is_won:isWon,
+            given_chars:givenChars,
+            guessed_chars:guessedChars,
             points_to_win:pointsToWin,
             credit_cost:creditCost,
         }
     })
-    const tempProfile = await prisma.profile.update({
-        where:{id:profile.id},
-        data:{credit:profile.credit-creditCost}
-    })
 
-    profile = {
-        ...tempProfile,
-        lastGame:game,
-        lastOOMessage: profile.lastOOMessage
-    } as MProfile
-
-    console.log("created game",JSON.stringify(profile.lastGame, null, 2))
-
-    redis.set(profile.twilio_id, JSON.stringify(profile), "EX", defaultRedisExpiration)
-
-    return profile
 }
 
 
 
-
-
-export async function getPlayerRank(config:Config, profile:MProfile) {
+export async function getPlayerRank(config:Config, profile:Profile) {
     const result = await prisma.$queryRaw<{rank:number}|undefined|null>`
       SELECT
         RANK() OVER (ORDER BY points DESC) as rank
@@ -209,12 +108,12 @@ export async function getMErrorByRecent(config: Config, count: number) {
 
 export async function createMError(
     config: Config,
-    profile: MProfile,
+    profile: Profile,
     content: string,
     extra_json: any | undefined | null = undefined,
 ) {
 
-    const mError = await prisma.mError.create({
+    return await prisma.mError.create({
         data: {
             profile_id: profile.id,
             content,
@@ -224,112 +123,57 @@ export async function createMError(
 }
 
 
+
+export async function getLastActiveMessage(config: Config, profile:Profile) {
+    return await prisma.message.findFirst({
+        where: {
+            profile_id:profile.id,
+            is_active: true
+        },
+        orderBy: {
+            created_at: 'desc',
+        },
+    })
+}
+
 export async function createMessage(
     config: Config,
-    profile: MProfile,
+    profile: Profile,
     messageDir: MessageDir,
     content: string,
-    optionIds:string[],
-    extra_json: any | undefined | null = undefined,
+    isActive:boolean,
+    messageType: MessageType,
+    extraJson: any | undefined | null = undefined,
     image_urls: string[] = []
 ) {
-
-    const message = await prisma.message.create({
+    return await prisma.message.create({
         data: {
             profile_id: profile.id,
             message_dir: messageDir,
             content,
-            option_ids:optionIds,
-            extra_json,
+            is_active:isActive,
+            extra_json:extraJson,
+            message_type:messageType,
             image_urls
         }
     })
-
-    if(
-        message.message_dir===MessageDir.OUTBOUND &&
-        message.option_ids.length > 0){
-
-            profile.lastOOMessage = message
-    }
-
-    redis.set(profile.twilio_id, JSON.stringify(profile), "EX", defaultRedisExpiration)
-
-    return profile
 }
 
 
-export async function createProfile(config: Config, twilioId: string): Promise<MProfile> {
-
-    const tempProfile = await prisma.profile.create({
+export async function createProfile(config: Config, twilioId: string): Promise<Profile> {
+    return await prisma.profile.create({
         data: {
             twilio_id: twilioId,
         }
     })
-    const profile = {
-        ...tempProfile,
-        lastGame:null,
-        lastOOMessage: null
-    } as MProfile
-
-    redis.set(twilioId, JSON.stringify(profile), "EX", defaultRedisExpiration)
-
-    return profile
 }
 
-
 export async function getProfile(config: Config, twilioId: string) {
-
-
-
-    let profile: MProfile | null | undefined
-
-    const res = await redis.get(twilioId)
-    // const res = null
-
-    if (res == null) {
-        const profileValue = await prisma.profile.findFirst({
-            where: {
-                twilio_id: twilioId
-            },
-            include: {
-                games:{
-                    take: 1,
-                    orderBy: {
-                        created_at: 'desc',
-                    },
-                },
-                messages: {
-                    where:{
-                        message_dir:MessageDir.OUTBOUND,
-                        option_ids:{
-                            isEmpty:false
-                        }
-                    },
-                    take: 1,
-                    orderBy: {
-                        created_at: 'desc',
-                    },
-                }
-            }
-        })
-
-        
-        
-        if (profileValue) {
-
-            profile = {
-                ...profileValue,
-                lastGame:profileValue.games[0],
-                lastOOMessage: profileValue.messages[0]
-            } as MProfile
-
-            redis.set(twilioId, JSON.stringify(profile), "EX", defaultRedisExpiration)
+    return await prisma.profile.findFirst({
+        where: {
+            twilio_id: twilioId
         }
-    } else {
-        profile = JSON.parse(res)
-    }
-
-    return profile
+    })
 }
 
 

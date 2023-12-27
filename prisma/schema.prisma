@@ -12,17 +12,17 @@ datasource db {
 model Config {
   id ConfigType @id
 
-  easy_game_given_count Int @default(5)
+  easy_game_given_count   Int @default(5)
   medium_game_given_count Int @default(3)
-  hard_game_given_count Int @default(1)
+  hard_game_given_count   Int @default(1)
 
-  easy_points_to_win Int @default(1)
+  easy_points_to_win   Int @default(1)
   medium_points_to_win Int @default(2)
-  hard_points_to_win Int @default(4)
+  hard_points_to_win   Int @default(4)
 
-  easy_credit_cost Int @default(1)
+  easy_credit_cost   Int @default(1)
   medium_credit_cost Int @default(2)
-  hard_credit_cost Int @default(4)
+  hard_credit_cost   Int @default(4)
 
   game_guess_count Int @default(4)
 
@@ -31,51 +31,62 @@ model Config {
 }
 
 model Profile {
-  id         String    @id @default(uuid())
-  created_at DateTime  @default(now())
-  twilio_id  String    @unique
-  credit     Int       @default(3)
-  points     Int       @default(0)
-  messages   Message[]
-  games      Game[]
-  errors     MError[]
+  id               String           @id @default(uuid())
+  created_at       DateTime         @default(now())
+  twilio_id        String           @unique
+  credit           Int              @default(3)
+  points           Int              @default(0)
+  messages         Message[]
+  games            Game[]
+  errors           MError[]
+  credit_transfers CreditTransfer[]
 
   @@index(fields: [twilio_id], type: Hash)
   @@index(fields: [points], type: BTree)
 }
 
 model Message {
-  id          String     @id @default(uuid())
-  created_at  DateTime   @default(now())
-  content     String
-  option_ids  String[]
-  profile     Profile    @relation(fields: [profile_id], references: [id], onDelete: Cascade)
-  profile_id  String
-  message_dir MessageDir
-  extra_json  Json?
-  image_urls  String[]
+  id           String      @id @default(uuid())
+  created_at   DateTime    @default(now())
+  content      String
+  message_type MessageType
+  is_active  Boolean
+  profile      Profile     @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  profile_id   String
+  message_dir  MessageDir
+  extra_json   Json?
+  image_urls   String[]
 
   @@index(fields: [created_at], type: BTree)
 }
 
-model Game {
-  id         String     @id @default(uuid())
-  created_at  DateTime   @default(now())
-  phrase     String
-  difficulty Difficulty
-  is_active Boolean @default(true)
-  is_won  Boolean @default(false)
-  points_to_win  Int
-  credit_cost Int
-  given      String[]
-  guesses    String[]   @default([])
-  profile    Profile    @relation(fields: [profile_id], references: [id], onDelete: Cascade)
-  profile_id String
+model Phrase {
+  id      Int    @id @default(autoincrement())
+  content String
 }
 
-model Phrase {
-  id Int @id @default(autoincrement())
-  content String
+
+model Game {
+  id            String     @id @default(uuid())
+  created_at    DateTime   @default(now())
+  phrase        String
+  difficulty    Difficulty
+  is_won        Boolean
+  points_to_win Int
+  credit_cost   Int
+  given_chars   String[]
+  guessed_chars String[]
+  profile       Profile    @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  profile_id    String
+}
+
+model CreditTransfer {
+  id           String               @id @default(uuid())
+  created_at   DateTime             @default(now())
+  credit_count Int
+  reason       CreditTransferReason
+  profile      Profile              @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  profile_id   String
 }
 
 model MError {
@@ -89,9 +100,18 @@ model MError {
   @@index(fields: [created_at], type: BTree)
 }
 
+
+
 enum MessageDir {
   INBOUND
   OUTBOUND
+}
+
+enum MessageType {
+  MENU
+  GAME
+  NOTIF
+  USER
 }
 
 enum ConfigType {
@@ -105,3 +125,7 @@ enum Difficulty {
   HARD
 }
 
+enum CreditTransferReason {
+  PURCHASE
+  GAME
+}
