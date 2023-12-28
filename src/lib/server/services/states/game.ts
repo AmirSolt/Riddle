@@ -16,9 +16,9 @@ export async function getGameResponse(config: Config, profile: Profile, incoming
         isWon = gameRecord.phrase.toLocaleLowerCase() === incomingMessageStr.toLocaleLowerCase()
     }else{
 
-        gameRecord.guessedChars.push(incomingMessageStr)
+        gameRecord.guessedChars.push(incomingMessageStr.toLocaleLowerCase())
 
-        if(allCharactersExist(gameRecord.phrase, [...gameRecord.givenChars, ...gameRecord.guessedChars])) {
+        if(allCharactersExist(gameRecord.phrase.toLocaleLowerCase(), [...gameRecord.givenChars, ...gameRecord.guessedChars])) {
             isOver = true
             isWon = true
         }else{
@@ -85,6 +85,13 @@ export async function getGameResponse(config: Config, profile: Profile, incoming
 function isLetter(str: string) {
     return str.length === 1 && str.match(/[a-z]/i);
 }
-function allCharactersExist(str: string, characters: string[]): boolean {
-    return characters.every(char => str.includes(char));
-}
+function allCharactersExist(input: string, letters: string[]): boolean {
+    const inputSet = new Set(input.split(''));
+    for (const char of inputSet) {
+      if (!letters.includes(char)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  

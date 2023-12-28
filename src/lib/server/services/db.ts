@@ -30,7 +30,7 @@ export async function getPhrase(config: Config){
     })
 
     if(phrase==null || phrase.content==null){
-        throw error(500, "Error: db.ts-getPhrase phrase is null.")
+        throw error(500, `Error: db.ts-getPhrase phrase is null. randId:${randId} phraseCount:${phraseCount}`)
     }
 
     return phrase
@@ -152,7 +152,7 @@ export async function createMessage(
             message_dir: messageDir,
             content,
             is_active:isActive,
-            extra_json:extraJson,
+            extra_json:extraJson?JSON.stringify(extraJson):undefined,
             message_type:messageType,
             image_urls
         }
