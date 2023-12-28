@@ -3,7 +3,7 @@
 
 interface MenuOption{
     id:string
-    description:string
+    body:string
 }
 
 interface GameRecord{

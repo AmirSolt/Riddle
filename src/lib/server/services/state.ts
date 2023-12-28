@@ -1,6 +1,6 @@
 import { type Config, type Profile, MessageDir, MessageType } from "@prisma/client";
 import { createMessage, getLastActiveMessage } from "./db";
-
+import { getNormalOptions, optionsToStr } from "./states/helper";
 
 
 export async function handleIncomingMessage(config:Config, profile:Profile, incomingMessageStr:string):Promise<void>{
@@ -22,16 +22,17 @@ export async function createResponseMessage(config:Config, profile:Profile, inco
 
     if(lastActiveMessage==null){
 
-        await createMessage(
+        const normalOptions = getNormalOptions(config, profile)
+        const message = await createMessage(
             config,
             profile,
             MessageDir.OUTBOUND,
-            "Intro + menu",
+            `Intro\n${optionsToStr(normalOptions)}`,
             true,
             MessageType.MENU,
-            {} // menu
+            normalOptions,
         )
-        return "Intro + menu"
+        return message.content
     }
 
     if(lastActiveMessage?.message_type === MessageType.MENU){

@@ -159,6 +159,20 @@ export async function createMessage(
     })
 }
 
+export async function updateProfile(
+    config: Config,
+    profile: Profile,
+    credit:number,
+    points:number,
+    ): Promise<Profile> {
+    return await prisma.profile.update({
+        where:{id:profile.id},
+        data: {
+            credit,
+            points
+        }
+    })
+}
 
 export async function createProfile(config: Config, twilioId: string): Promise<Profile> {
     return await prisma.profile.create({
