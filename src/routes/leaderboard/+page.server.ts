@@ -11,17 +11,10 @@ export const load = async ({locals}) => {
             return {
                 rank:i+1,
                 points:p.points,
-                publicTwilioId: hideCharacters(p.twilio_id)
+                publicTwilioId: `******${p.twilio_id.slice(-1)[0]}`
             }
         })
     }
 };
 
-function hideCharacters(input: string): string {
-    if (input.length <= 2) {
-        return input;
-    }
-    const maskedSection = "*".repeat(input.length - 2);
-    const visibleSection = input.slice(-2);
-    return maskedSection + visibleSection;
-}
+

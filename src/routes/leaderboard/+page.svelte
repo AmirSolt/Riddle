@@ -8,7 +8,7 @@
 
     const tableSimple: TableSource = {
         // A list of heading labels.
-        head: ['Rank', 'Points', 'Number'],
+        head: ['Rank', 'Points', 'Tel'],
         // The data visibly shown in your table body UI.
         body: tableMapperValues(publicProfiles, ['rank', 'points', 'publicTwilioId']),
     };
@@ -16,5 +16,7 @@
 
 </script>
 
+<div class="p-2">
+    <Table source={tableSimple} />
 
-<Table source={tableSimple} />
+</div>
