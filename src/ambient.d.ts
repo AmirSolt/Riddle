@@ -12,3 +12,7 @@ interface GameRecord{
     givenChars:string[]
     guessedChars:string[]
 }
+
+interface PurchaseSession{
+    profileId:string
+}

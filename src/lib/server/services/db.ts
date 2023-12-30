@@ -2,11 +2,29 @@ import { prisma } from "../clients/prisma";
 import { ConfigType, type Message, MessageDir, type Config, type Profile, type MError, Difficulty, type Phrase, MessageType } from "@prisma/client";
 import { redis } from "../clients/redis";
 import { error } from "@sveltejs/kit";
+import { randomUUID } from "crypto";
 
 
 
 // expire redis records after x
 const defaultRedisExpiration = 60 * 10
+
+
+export async function createPurchaseSession(purchaseSessionData:PurchaseSession):Promise<string|null>{
+    const sessionCode = `purchase_session:${randomUUID()}` 
+    redis.set(sessionCode, JSON.stringify(purchaseSessionData))
+    return sessionCode
+}
+
+export async function getPurchaseSession(sessionCode:string|null|undefined):Promise<PurchaseSession|null>{
+    if(sessionCode==null) return null
+
+    const res = await redis.get(sessionCode)
+    if(res==null){
+        return null
+    }
+    return JSON.parse(res)
+}
 
 
 
