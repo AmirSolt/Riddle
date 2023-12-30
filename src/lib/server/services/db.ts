@@ -3,6 +3,7 @@ import { ConfigType, type Message, MessageDir, type Config, type Profile, type M
 import { redis } from "../clients/redis";
 import { error } from "@sveltejs/kit";
 import { randomUUID } from "crypto";
+import { NODE_ENV } from "$env/static/private";
 
 
 
@@ -245,6 +246,34 @@ export async function createConfig(): Promise<Config> {
 
 
 
+
+// =============== ONLY IN DEVELOPMENT =============
+export async function getLastMessages(config: Config, profile:Profile, count:number) {
+    if(NODE_ENV!=="development"){
+        throw error(403)
+    }
+
+    return await prisma.message.findMany({
+        where: {
+            profile_id:profile.id,
+        },
+        take:count,
+        orderBy: {
+            created_at: 'desc',
+        },
+    })
+}
+export async function deleteProfile(config: Config, profileId:string) {
+    if(NODE_ENV!=="development"){
+        throw error(403)
+    }
+
+    return await prisma.profile.delete({
+        where: {
+            id:profileId,
+        },
+    })
+}
 
 
 

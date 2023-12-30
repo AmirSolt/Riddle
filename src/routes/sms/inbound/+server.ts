@@ -4,6 +4,7 @@ import TwilioSDK from 'twilio';
 import type { Config, MError } from '@prisma/client';
 import { MessageDir, MessageType } from '@prisma/client';
 import { createResponseMessage, handleIncomingMessage } from '$lib/server/services/state.js';
+import { getChatResponse } from '$lib/server/services/chat.js';
 
 
 export const POST = async (event) => {
@@ -19,32 +20,14 @@ export const POST = async (event) => {
     
     const twimlResponse = new TwilioSDK.twiml.MessagingResponse();
 
-    // try{        
 
-        // preemptive cleaning
-        if(incomingMessageStr==null){
-            return new Response(twimlResponse.toString(), {
-                headers: {
-                'Content-Type': 'application/xml',
-                },
-            });
-        }
+    try{        
 
-        // init
-        const config:Config = event.locals.config
-        let profile = await getProfile(config, senderTwilioId)
-        if(profile == null){
-            profile = await createProfile(config, senderTwilioId)
-        }
+  
+        const responseStr = await getChatResponse(event, senderTwilioId, incomingMessageStr)
 
-
-        // handle incoming message
-        await handleIncomingMessage(config, profile, incomingMessageStr)
-
-        // handle response
-        const responseMessageStr = await createResponseMessage(config, profile, incomingMessageStr)
-        if(responseMessageStr){
-            twimlResponse.message(responseMessageStr)
+        if(responseStr){
+            twimlResponse.message(responseStr)
         }
         
         return new Response(twimlResponse.toString(), {
@@ -55,31 +38,31 @@ export const POST = async (event) => {
 
 
 
-    // }catch(err){
-    //     console.log("Error:",err)
+    }catch(err){
+        console.log("Error:",err)
 
-    //     const config:Config = event.locals.config
-    //     let profile = await getProfile(config, senderTwilioId)
-    //     if(profile == null){
-    //         profile = await createProfile(config, senderTwilioId)
-    //     }
+        const config:Config = event.locals.config
+        let profile = await getProfile(config, senderTwilioId)
+        if(profile == null){
+            profile = await createProfile(config, senderTwilioId)
+        }
 
-    //     await createMError(
-    //         config,
-    //         profile,
-    //         "Error:",err
-    //     )
+        await createMError(
+            config,
+            profile,
+            "Error:",err
+        )
 
-    //     const responseBody = `Error: Server encoutered an error. A notification has been sent to the developer.`
-    //     twimlResponse.message(responseBody)
+        const responseBody = `Error: Server encoutered an error. A notification has been sent to the developer.`
+        twimlResponse.message(responseBody)
 
-    //     return new Response(twimlResponse.toString(), {
-    //         headers: {
-    //         'Content-Type': 'application/xml',
-    //         },
-    //     });
+        return new Response(twimlResponse.toString(), {
+            headers: {
+            'Content-Type': 'application/xml',
+            },
+        });
 
-    // }
+    }
 };
 
 

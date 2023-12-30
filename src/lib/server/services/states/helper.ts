@@ -1,6 +1,7 @@
 import { error } from "@sveltejs/kit"
 import { Difficulty, MessageDir, MessageType, type Config, type Profile } from "@prisma/client"
-import { createMessage, getPhrase } from "../db"
+import { createMessage, createPurchaseSession, getPhrase } from "../db"
+import { DOMAIN } from "$env/static/private"
 
 
 
@@ -116,11 +117,24 @@ export const tools: { [key: string]: Tool } = {
     },
     store: {
         getBody: (config:Config, profile:Profile)=>{
+
             return ""
         },
         getResponse: async (config: Config, profile: Profile) => {
-
-            return ""
+            const purchaseSessionCode = createPurchaseSession({profileId:profile.id})
+            const storeLink = `${DOMAIN}/payment/store?psc=${purchaseSessionCode}`
+            const options = getNormalOptions(config, profile)
+            const message = await createMessage(
+                config,
+                profile,
+                MessageDir.OUTBOUND,
+                `Store:${storeLink} \n${optionsToStr(options)}`,
+                true,
+                MessageType.MENU,
+                options
+            )
+        
+            return message.content
         }
     },
     lead: {
