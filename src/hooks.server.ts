@@ -27,7 +27,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 //     const params = Object.fromEntries(new URLSearchParams(text));
 //     const { Body, From } = params
 
-//     let profile = await getProfile(config, From)
+//     let profile = await getProfileByTwilioId(config, From)
 //     if (profile == null) {
 //         console.log("hooks.server.ts: Could not find profile within error handling")
 //         return {message:"hooks.server.ts: Could not find profile within error handling"}

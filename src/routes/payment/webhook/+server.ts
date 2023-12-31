@@ -1,6 +1,9 @@
 import type { Stripe } from 'stripe'
 import { stripe } from '$lib/server/clients/stripe'
 import { PRIVATE_WEBHOOK_SECRET } from '$env/static/private';
+import { createCreditTransferAndUpdateProfile, getProfileById, getProfileByTwilioId } from '$lib/server/services/db.js';
+import { CreditTransferReason, MessageDir, MessageType } from '@prisma/client';
+import { sendSMS } from '$lib/server/services/chat.js';
 
 
 function toBuffer(ab: ArrayBuffer): Buffer {
@@ -12,9 +15,10 @@ function toBuffer(ab: ArrayBuffer): Buffer {
     return buf;
 }
 
-export const POST = async ({ request }) => {
+export const POST = async ({ locals, request }) => {
     let data: Stripe.Event.Data | null = null;
     let eventType: string | null = null;
+    const config = locals.config
 
     const _rawBody = await request.arrayBuffer();
     const payload = toBuffer(_rawBody);
@@ -82,11 +86,46 @@ export const POST = async ({ request }) => {
         //   // Then define and call a function to handle the event checkout.session.async_payment_succeeded
         //   break;
         case 'checkout.session.completed':
-          const checkoutSessionCompleted:any = data.object;
-          const profileId = checkoutSessionCompleted.client_reference_id
-        
+          const session:any = data.object;
+          const profileId = session.client_reference_id
+          const profile = await getProfileById(config, profileId)
 
-          console.log(JSON.stringify(data.object))
+          if(profile==null){
+            return new Response(JSON.stringify({
+                error: `Profile was not found. data: profileId: ${profileId}`
+            }),
+                {
+                    status: 500,
+                    headers: {},
+            })
+          }
+
+          const { line_items } = await stripe.checkout.sessions.retrieve(
+            session.id,
+            {
+              expand: ["line_items"],
+            }
+          );
+
+          console.log("line_items",JSON.stringify(line_items, undefined, 2))
+          line_items?.data.forEach(item=>{
+
+            const numbersStr = item.description.match(/\d+/g)
+            if(numbersStr){
+                const purchasedCredits = parseInt(numbersStr[0])
+                createCreditTransferAndUpdateProfile(config, profile, purchasedCredits, CreditTransferReason.PURCHASE)
+                sendSMS(
+                    config,
+                    profile,
+                    MessageDir.OUTBOUND,
+                    `Success!\n${purchasedCredits} credits was added to your account.`,
+                    false,
+                    MessageType.NOTIF,
+                )
+            }
+          })
+          
+
           // Then define and call a function to handle the event checkout.session.completed
           break;
         // case 'checkout.session.expired':

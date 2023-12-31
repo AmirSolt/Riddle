@@ -15,7 +15,6 @@
         pricing-table-id="prctbl_1OSZTuLIYTzX0UWXvt8tTAJw"
         publishable-key={publishableKey}
         client-reference-id={purchaseSession.profileId}
-
         >
     </stripe-pricing-table>
 {:else}
@@ -38,4 +37,3 @@
     
 
 {/if}
-

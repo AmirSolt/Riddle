@@ -13,6 +13,11 @@
     <button class="btn variant-filled-error">Delete Profile</button>
 </form>
 
+<div class="card m-2">
+    <p>
+        Credit: {profile?.credit}
+    </p>
+</div>
 
 
 {#if messages}

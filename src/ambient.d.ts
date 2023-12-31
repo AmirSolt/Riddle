@@ -13,6 +13,12 @@ interface GameRecord{
     guessedChars:string[]
 }
 
+interface GameConfig{
+    givenCount:number
+    pointsToWin:number
+    creditCost:number
+}
+
 interface PurchaseSession{
     profileId:string
 }

@@ -127,5 +127,5 @@ enum Difficulty {
 
 enum CreditTransferReason {
   PURCHASE
-  GAME
+  START_GAME
 }

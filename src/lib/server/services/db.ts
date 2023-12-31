@@ -1,5 +1,5 @@
 import { prisma } from "../clients/prisma";
-import { ConfigType, type Message, MessageDir, type Config, type Profile, type MError, Difficulty, type Phrase, MessageType } from "@prisma/client";
+import { ConfigType, type Message, MessageDir, type Config, type Profile, type MError, Difficulty, type Phrase, MessageType, CreditTransferReason } from "@prisma/client";
 import { redis } from "../clients/redis";
 import { error } from "@sveltejs/kit";
 import { randomUUID } from "crypto";
@@ -10,9 +10,59 @@ import { NODE_ENV } from "$env/static/private";
 // expire redis records after x
 const defaultRedisExpiration = 60 * 10
 
+export async function createGameAndCreditTransferAndUpdateProfile(
+    config:Config, 
+    profile:Profile, 
+    gameRecord:GameRecord,
+    isWon:boolean,
+    gameConfig:GameConfig
+    ){
+    
+    createGame(
+        config,
+        profile,
+        gameRecord.phrase,
+        gameRecord.difficulty as Difficulty,
+        isWon,
+        gameRecord.givenChars,
+        gameRecord.guessedChars,
+        gameConfig.pointsToWin,
+        gameConfig.creditCost,
+    )
+
+    createCreditTransfer(config, profile, -gameConfig.creditCost, CreditTransferReason.NEW_GAME)
+
+    return await updateProfile(
+        config,
+        profile,
+        profile.credit - gameConfig.creditCost,
+        isWon? profile.points+gameConfig.pointsToWin : profile.points
+    )
+}
+export async function createCreditTransferAndUpdateProfile(config:Config, profile:Profile, amount:number, reason:CreditTransferReason){
+    createCreditTransfer(config, profile, amount, reason)
+    return await updateProfile(
+        config,
+        profile,
+        profile.credit + amount,
+        profile.points
+    )
+}
+
+export async function createCreditTransfer(config:Config, profile:Profile, amount:number, reason:CreditTransferReason){
+    return await prisma.creditTransfer.create({
+        data:{
+            profile_id:profile.id,
+            credit_count:amount,
+            reason:reason
+        }
+    })
+}
+
+
 
 export async function createPurchaseSession(purchaseSessionData:PurchaseSession):Promise<string|null>{
-    const sessionCode = `purchase_session:${randomUUID()}` 
+    const sessionCode = `psc:${randomUUID()}` 
     redis.set(sessionCode, JSON.stringify(purchaseSessionData))
     return sessionCode
 }
@@ -201,7 +251,14 @@ export async function createProfile(config: Config, twilioId: string): Promise<P
     })
 }
 
-export async function getProfile(config: Config, twilioId: string) {
+export async function getProfileById(config: Config, profileId: string){
+    return await prisma.profile.findFirst({
+        where: {
+            id: profileId
+        }
+    })
+}
+export async function getProfileByTwilioId(config: Config, twilioId: string) {
     return await prisma.profile.findFirst({
         where: {
             twilio_id: twilioId

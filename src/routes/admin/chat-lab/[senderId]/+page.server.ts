@@ -1,5 +1,5 @@
 import { getChatResponse } from '$lib/server/services/chat.js';
-import { createProfile, deleteProfile, getLastMessages, getProfile } from '$lib/server/services/db.js';
+import { createProfile, deleteProfile, getLastMessages, getProfileByTwilioId } from '$lib/server/services/db.js';
 import type { Message, Profile } from '@prisma/client';
 import { error } from '@sveltejs/kit';
 
@@ -12,7 +12,7 @@ export const load = async ({locals, params}) => {
     let messages:Message[]|null=null
 
     if(senderId){
-        profile = await getProfile(config, senderId)
+        profile = await getProfileByTwilioId(config, senderId)
 
         if(profile)
             messages = await getLastMessages(config, profile, 10)

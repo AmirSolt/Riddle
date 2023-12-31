@@ -1,5 +1,5 @@
 import type { RequestHandler } from '@sveltejs/kit'
-import { getProfile, createProfile, createMessage, createMError } from '$lib/server/services/db';
+import { getProfileByTwilioId, createProfile, createMessage, createMError } from '$lib/server/services/db';
 import TwilioSDK from 'twilio';
 import type { Config, MError } from '@prisma/client';
 import { MessageDir, MessageType } from '@prisma/client';
@@ -42,7 +42,7 @@ export const POST = async (event) => {
         console.log("Error:",err)
 
         const config:Config = event.locals.config
-        let profile = await getProfile(config, senderTwilioId)
+        let profile = await getProfileByTwilioId(config, senderTwilioId)
         if(profile == null){
             profile = await createProfile(config, senderTwilioId)
         }

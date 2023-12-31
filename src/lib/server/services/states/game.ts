@@ -1,5 +1,5 @@
 import { MessageDir, type Config, type Difficulty, type Message, type Profile, MessageType } from "@prisma/client"
-import { createGame, createMessage, updateProfile } from "../db"
+import { createGame, createGameAndCreditTransferAndUpdateProfile, createMessage, updateProfile } from "../db"
 import { censorPhrase, getGameConfig, getNormalOptions, optionsToStr } from "./helper"
 
 
@@ -32,23 +32,12 @@ export async function getGameResponse(config: Config, profile: Profile, incoming
     if(isOver){
         const gameConfig = getGameConfig(config, gameRecord.difficulty as Difficulty)
 
-        await createGame(
+        profile = await createGameAndCreditTransferAndUpdateProfile(
             config,
             profile,
-            gameRecord.phrase,
-            gameRecord.difficulty as Difficulty,
+            gameRecord,
             isWon,
-            gameRecord.givenChars,
-            gameRecord.guessedChars,
-            gameConfig.pointsToWin,
-            gameConfig.creditCost,
-        )
-
-        profile = await updateProfile(
-            config,
-            profile,
-            profile.credit - gameConfig.creditCost,
-            isWon? profile.points+gameConfig.pointsToWin : profile.points
+            gameConfig
         )
 
         const winContent = isWon? `You have won ${gameConfig.pointsToWin}.` : "You lost."
