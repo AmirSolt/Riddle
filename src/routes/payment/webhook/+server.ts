@@ -71,27 +71,29 @@ export const POST = async ({ request }) => {
 
 
     switch (eventType) {
-        case 'checkout.session.async_payment_failed':
-          const checkoutSessionAsyncPaymentFailed = data.object;
-          console.log(JSON.stringify(data.object))
-          // Then define and call a function to handle the event checkout.session.async_payment_failed
-          break;
-        case 'checkout.session.async_payment_succeeded':
-          const checkoutSessionAsyncPaymentSucceeded = data.object;
-          console.log(JSON.stringify(data.object))
-          // Then define and call a function to handle the event checkout.session.async_payment_succeeded
-          break;
+        // case 'checkout.session.async_payment_failed':
+        //   const checkoutSessionAsyncPaymentFailed = data.object;
+        //   console.log(JSON.stringify(data.object))
+        //   // Then define and call a function to handle the event checkout.session.async_payment_failed
+        //   break;
+        // case 'checkout.session.async_payment_succeeded':
+        //   const checkoutSessionAsyncPaymentSucceeded = data.object;
+        //   console.log(JSON.stringify(data.object))
+        //   // Then define and call a function to handle the event checkout.session.async_payment_succeeded
+        //   break;
         case 'checkout.session.completed':
-          const checkoutSessionCompleted = data.object;
+          const checkoutSessionCompleted:any = data.object;
+          const profileId = checkoutSessionCompleted.client_reference_id
+        
+
           console.log(JSON.stringify(data.object))
           // Then define and call a function to handle the event checkout.session.completed
           break;
-        case 'checkout.session.expired':
-          const checkoutSessionExpired = data.object;
-          console.log(JSON.stringify(data.object))
-          // Then define and call a function to handle the event checkout.session.expired
-          break;
-        // ... handle other event types
+        // case 'checkout.session.expired':
+        //   const checkoutSessionExpired = data.object;
+        //   console.log(JSON.stringify(data.object))
+        //   // Then define and call a function to handle the event checkout.session.expired
+        //   break;
         default:
           console.log(`Unhandled event type ${eventType}`);
       }

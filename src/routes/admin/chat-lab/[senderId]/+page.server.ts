@@ -13,9 +13,6 @@ export const load = async ({locals, params}) => {
 
     if(senderId){
         profile = await getProfile(config, senderId)
-        if(profile==null){
-            profile = await createProfile(config, senderId)
-        }
 
         if(profile)
             messages = await getLastMessages(config, profile, 10)
