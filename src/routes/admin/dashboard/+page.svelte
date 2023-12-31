@@ -1,14 +1,15 @@
 <script lang="ts">
-    export let data
-    const {profile, messages} = data
+
+    let senderId:string = "123123"
+
+
 </script>
 
-<form action="?/deleteProfile" method="post">
-    <button class="btn variant-filled-error">Delete Profile</button>
-</form>
+<label class="label">
+	<span>Sender Id</span>
+    <input class="input" type="text" bind:value={senderId}>
+</label>
+<a class="btn variant-filled" href="/admin/chat-lab/{encodeURIComponent(senderId??"")}">
+    Test lab: {senderId??"Empty"}
+</a>
 
-
-<form action="?/chat" method="post">
-    <input type="text" name="senderId" id="" placeholder="123123123">
-    <input type="text" name="content" id="">
-</form>

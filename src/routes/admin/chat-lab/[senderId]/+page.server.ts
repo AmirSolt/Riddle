@@ -1,17 +1,21 @@
 import { getChatResponse } from '$lib/server/services/chat.js';
-import { deleteProfile, getLastMessages, getProfile } from '$lib/server/services/db.js';
+import { createProfile, deleteProfile, getLastMessages, getProfile } from '$lib/server/services/db.js';
 import type { Message, Profile } from '@prisma/client';
 import { error } from '@sveltejs/kit';
 
-export const load = async ({locals, url}) => {
+export const load = async ({locals, params}) => {
     const config = locals.config
-    const senderId = url.searchParams.get("senderId")
+    let senderId = params.senderId
+    if(senderId)senderId = senderId.trim()
 
     let profile:Profile|null=null
     let messages:Message[]|null=null
 
     if(senderId){
         profile = await getProfile(config, senderId)
+        if(profile==null){
+            profile = await createProfile(config, senderId)
+        }
 
         if(profile)
             messages = await getLastMessages(config, profile, 10)
@@ -19,7 +23,8 @@ export const load = async ({locals, url}) => {
 
     return {
         profile,
-        messages   
+        messages,
+        senderIdLoad:senderId
     }
 
 };

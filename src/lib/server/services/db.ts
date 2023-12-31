@@ -257,9 +257,9 @@ export async function getLastMessages(config: Config, profile:Profile, count:num
         where: {
             profile_id:profile.id,
         },
-        take:count,
+        take:-count,
         orderBy: {
-            created_at: 'desc',
+            created_at: 'asc',
         },
     })
 }

@@ -121,8 +121,9 @@ export const tools: { [key: string]: Tool } = {
             return ""
         },
         getResponse: async (config: Config, profile: Profile) => {
-            const purchaseSessionCode = createPurchaseSession({profileId:profile.id})
-            const storeLink = `${DOMAIN}/payment/store?psc=${purchaseSessionCode}`
+            const purchaseSessionCode = await createPurchaseSession({profileId:profile.id})
+
+            const storeLink = `${DOMAIN}/payment/store?psc=${encodeURIComponent(purchaseSessionCode??"")}`
             const options = getNormalOptions(config, profile)
             const message = await createMessage(
                 config,
